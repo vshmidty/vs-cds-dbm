@@ -11,6 +11,7 @@ import {
   getViewNamesFromPostgres,
   dropDatabase,
   extractColumnNamesFromPostgres,
+  getProcedureNamesFromPostgres,
 } from './util/postgreshelper'
 import { BaseAdapter } from '../src/adapter/BaseAdapter'
 
@@ -59,7 +60,7 @@ describe('PostgresAdapter', () => {
       cds.env.requires.db = Object.assign({ kind: 'postgres' }, options.service)
       // @ts-ignore
       cds.env.requires.postgres = options.service
-      console.log(cds.env.requires);
+      console.log(cds.env.requires)
       adapter = await adapterFactory('db', options)
     })
     it('+ dropAll: false + should remove all cds based tables and views from the database', async () => {
@@ -287,6 +288,54 @@ describe('PostgresAdapter', () => {
 
         const countResponse = await SELECT.from('csw.Beers').columns('COUNT(*) as myCount')
         expect(parseInt(countResponse[0].myCount)).toEqual(3)
+      })
+    })
+
+    //TODO finish with tests
+    describe.skip('plain sql scripts', () => {
+      async function redeploy(scriptsFolder) {
+        options.migrations.scripts = scriptsFolder
+        adapter = await adapterFactory('db', options)
+        await adapter.deploy({ loadMode: 'delta' })
+        // @ts-ignore
+        cds.services['db'].disconnect()
+      }
+
+      afterEach(async (done) => {
+        //drop created procedures
+        await redeploy('./test/app/db/scripts/clean/')
+
+        delete options.migrations.scripts
+      })
+
+      it('should execute all plain sql scripts and create all artifacts', async () => {
+        await redeploy('./test/app/db/scripts/correct/')
+
+        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+        expect(existingProceduresInPostgres.length).toEqual(2)
+      })
+      it('should rollback all scripts if at least one failed', async (done) => {
+        try {
+          await redeploy('./test/app/db/scripts/incorrect/')
+          fail('should fail')
+        } catch (e) {
+          const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+          expect(existingProceduresInPostgres.length).toEqual(0)
+        }
+      })
+      it('should not fail if scripts folder is empty', async () => {
+        await redeploy('./test/app/db/scripts/empty/')
+
+        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+        expect(existingProceduresInPostgres.length).toEqual(0)
+      })
+
+      it('should fail if scripts folder does not exist', async () => {
+        try {
+          await redeploy('./test/app/db/scripts/noFolderExists/')
+          fail('should fail')
+        } catch (e) {
+        }
       })
     })
   })

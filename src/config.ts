@@ -14,7 +14,8 @@ interface migrationOptions {
   }
   migrations?: {
     path: string
-  }
+  },
+  scripts?: string
 }
 
 interface serviceOptions {

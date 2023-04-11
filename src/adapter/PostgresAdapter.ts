@@ -1,11 +1,16 @@
 import { Client, ClientConfig } from 'pg'
-import fs from 'fs'
 import liquibase from '../liquibase'
 import { BaseAdapter } from './BaseAdapter'
 import { liquibaseOptions } from './../config'
 import { PostgresDatabase } from './../types/PostgresDatabase'
 import { ChangeLog } from '../ChangeLog'
 import { ViewDefinition } from '../types/AdapterTypes'
+import cds from '@sap/cds'
+
+import fs from 'fs'
+import path from 'path'
+
+const { readdir } = fs.promises
 
 const getCredentialsForClient = (credentials) => {
   if (typeof credentials.username !== 'undefined') {
@@ -39,8 +44,13 @@ export class PostgresAdapter extends BaseAdapter {
     const client = new Client(getCredentialsForClient(credentials))
     await client.connect()
     const { rows } = await client.query(
-      `SELECT table_name, view_definition FROM information_schema.views WHERE table_schema = 'public' AND table_name = $1 ORDER BY table_name;`,
-      [viewName]
+      `
+          SELECT table_name, view_definition
+          FROM information_schema.views
+          WHERE table_schema = 'public'
+            AND table_name = $1
+          ORDER BY table_name;`,
+      [viewName],
     )
     await client.end()
 
@@ -73,6 +83,7 @@ export class PostgresAdapter extends BaseAdapter {
     await client.query(`TRUNCATE ${table} RESTART IDENTITY`)
     client.end()
   }
+
   /**
    *
    */
@@ -243,4 +254,46 @@ export class PostgresAdapter extends BaseAdapter {
       })
     }
   }
+
+  /**
+   * Execute all plain SQL queries defined in *.sql files
+   * Using native transaction, because executeSQL is not available in liquibase. See: https://github.com/liquibase/liquibase/issues/3793
+   */
+  async _executePlainSQL() {
+    const scripts = this.options.migrations.scripts
+    if (!scripts) {
+      return
+    }
+
+    const credentials = this.options.service.credentials
+    const schema = this.options.migrations.schema!.default
+    const client = new Client(getCredentialsForClient(credentials))
+    await client.connect()
+    await client.query(`SET search_path TO ${schema};`)
+
+    const files = await readdir(scripts)
+
+    for (let each of files.filter(this._filterSqlFiles.bind(this))) {
+      // Load the content
+      const file = path.join(scripts, each)
+      const src = fs.readFileSync(file, 'utf8')
+      if (!src) continue
+
+      this.logger.log(`[cds-dbm] - executing ${file}`)
+      await client.query(src)
+    }
+
+    await client.end()
+    this.logger.log(`[cds-dbm] - sql scripts successfully executed`)
+  }
+
+  /**
+   * @param filename
+   * @param _
+   * @param allFiles
+   */
+  private _filterSqlFiles(filename, _, allFiles) {
+    return (filename[0] !== '-' && filename.endsWith('.sql'))
+  }
+
 }

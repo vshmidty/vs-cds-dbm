@@ -70,6 +70,8 @@ export abstract class BaseAdapter {
    */
   abstract _createDatabase(): Promise<void>
 
+  abstract _executePlainSQL(): Promise<void>
+
   /**
    * Return the specific options for liquibase.
    *
@@ -121,6 +123,7 @@ export abstract class BaseAdapter {
     const loader = new DataLoader(this, isFullMode)
     // TODO: Make more flexible
     await loader.loadFrom(['data', 'csv'])
+    this.logger.log(`[cds-dbm] - csv data successfully loaded to the database`)
   }
 
   /**
@@ -262,6 +265,8 @@ export abstract class BaseAdapter {
       if (loadMode) {
         await this.load(loadMode.toLowerCase() === 'full')
       }
+
+      await this._executePlainSQL()
     } else {
       this.logger.log(updateSQL.stdout)
     }
