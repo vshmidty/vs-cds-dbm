@@ -31,6 +31,17 @@ async function getTableNamesFromPostgres(credentials) {
   return rows
 }
 
+async function getProcedureNamesFromPostgres(credentials) {
+  const client = new Client(getCredentialsForClient(credentials))
+  await client.connect()
+  const { rows } = await client.query(
+    `SELECT routine_name FROM information_schema.routines WHERE routine_type = 'PROCEDURE' AND routine_schema = 'public';`
+  )
+  await client.end()
+
+  return rows
+}
+
 async function getViewNamesFromPostgres(credentials) {
   const client = new Client(getCredentialsForClient(credentials))
   await client.connect()
@@ -140,4 +151,5 @@ export {
   extractTableColumnNamesFromSQL,
   extractViewColumnNames,
   dropDatabase,
+  getProcedureNamesFromPostgres,
 }
