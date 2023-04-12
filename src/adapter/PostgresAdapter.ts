@@ -41,22 +41,24 @@ const getCredentialsForClient = (credentials) => {
 export class PostgresAdapter extends BaseAdapter {
   async getViewDefinition(viewName: string): Promise<ViewDefinition> {
     const credentials = this.options.service.credentials
+    const schema = this.options.migrations.schema?.default
     const client = new Client(getCredentialsForClient(credentials))
     await client.connect()
     const { rows } = await client.query(
       `
           SELECT table_name, view_definition
           FROM information_schema.views
-          WHERE table_schema = 'public'
-            AND table_name = $1
+          WHERE table_schema = $1
+            AND table_name = $2
           ORDER BY table_name;`,
-      [viewName],
+      [schema, viewName],
     )
     await client.end()
 
+    const publicSchemaRegex = new RegExp(`${schema}.`, 'g');
     const viewDefinition: ViewDefinition = {
       name: viewName,
-      definition: rows[0]?.view_definition?.replace(/public./g, ''),
+      definition: rows[0]?.view_definition?.replace(publicSchemaRegex, ''),
     }
 
     return viewDefinition
@@ -126,6 +128,7 @@ export class PostgresAdapter extends BaseAdapter {
       url: url,
       classpath: `${__dirname}/../../drivers/postgresql-42.3.2.jar`,
       driver: 'org.postgresql.Driver',
+      defaultSchemaName: this.options.migrations.schema!.default
     }
 
     switch (cmd) {
@@ -134,7 +137,6 @@ export class PostgresAdapter extends BaseAdapter {
         liquibaseOptions.referenceUrl = liquibaseOptions.url
         liquibaseOptions.referenceUsername = liquibaseOptions.username
         liquibaseOptions.referencePassword = liquibaseOptions.password
-        liquibaseOptions.defaultSchemaName = this.options.migrations.schema!.default
         liquibaseOptions.referenceDefaultSchemaName = this.options.migrations.schema!.reference
         break
       case 'update':

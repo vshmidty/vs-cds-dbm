@@ -20,44 +20,44 @@ function getCredentialsForClient(credentials) {
   }
 }
 
-async function getTableNamesFromPostgres(credentials) {
+async function getTableNamesFromPostgres(schema, credentials) {
   const client = new Client(getCredentialsForClient(credentials))
   await client.connect()
   const { rows } = await client.query(
-    `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;`
+    `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = '${schema}' ORDER BY table_name;`
   )
   await client.end()
 
   return rows
 }
 
-async function getProcedureNamesFromPostgres(credentials) {
+async function getProcedureNamesFromPostgres(schema, credentials) {
   const client = new Client(getCredentialsForClient(credentials))
   await client.connect()
   const { rows } = await client.query(
-    `SELECT routine_name FROM information_schema.routines WHERE routine_type = 'PROCEDURE' AND routine_schema = 'public';`
+    `SELECT routine_name FROM information_schema.routines WHERE routine_type = 'PROCEDURE' AND routine_schema = '${schema}';`
   )
   await client.end()
 
   return rows
 }
 
-async function getViewNamesFromPostgres(credentials) {
+async function getViewNamesFromPostgres(schema, credentials) {
   const client = new Client(getCredentialsForClient(credentials))
   await client.connect()
   const { rows } = await client.query(
-    `SELECT table_name FROM information_schema.views WHERE table_schema = 'public' ORDER BY table_name;`
+    `SELECT table_name FROM information_schema.views WHERE table_schema = '${schema}' ORDER BY table_name;`
   )
   await client.end()
 
   return rows
 }
 
-const extractColumnNamesFromPostgres = async (credentials, table) => {
+const extractColumnNamesFromPostgres = async (schema, credentials, table) => {
   const client = new Client(getCredentialsForClient(credentials))
   await client.connect()
   const { rows } = await client.query({
-    text: `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 ORDER BY column_name;`,
+    text: `SELECT column_name FROM information_schema.columns WHERE table_schema = '${schema}' AND table_name = $1 ORDER BY column_name;`,
     values: [table],
   })
   await client.end()

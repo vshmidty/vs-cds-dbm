@@ -70,7 +70,7 @@ describe('PostgresAdapter', () => {
       // drop everything
       await adapter.drop({ dropAll: false })
 
-      const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+      const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
       const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
       for (const entity of tableAndViewNamesFromCds) {
@@ -82,13 +82,13 @@ describe('PostgresAdapter', () => {
       // use build-in mechanism to deploy
       await cds_deploy(options.service.model[0], {}).to('db')
 
-      let existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+      let existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
       expect(existingTablesInPostgres.length).not.toEqual(0)
 
       // drop everything
       await adapter.drop({ dropAll: true })
 
-      existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+      existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
       expect(existingTablesInPostgres.length).toEqual(0)
     })
   })
@@ -110,7 +110,7 @@ describe('PostgresAdapter', () => {
       await dropDatabase(options.service.credentials)
 
       await adapter.deploy({ createDb: true })
-      const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+      const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
       expect(existingTablesInPostgres.length).toBeGreaterThan(0)
     })
 
@@ -118,7 +118,7 @@ describe('PostgresAdapter', () => {
       await adapter.drop({ dropAll: true })
       await adapter.deploy({})
 
-      const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+      const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
       const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
       for (const entity of tableAndViewNamesFromCds) {
@@ -153,7 +153,7 @@ describe('PostgresAdapter', () => {
         adapter = await adapterFactory('db', options)
         await adapter.deploy({})
 
-        const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+        const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
         for (const entity of tableAndViewNamesFromCds) {
@@ -167,7 +167,7 @@ describe('PostgresAdapter', () => {
         adapter = await adapterFactory('db', options)
         await adapter.deploy({})
 
-        const existingViewsInPostgres = await getViewNamesFromPostgres(options.service.credentials)
+        const existingViewsInPostgres = await getViewNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
         for (const entity of tableAndViewNamesFromCds) {
@@ -185,7 +185,7 @@ describe('PostgresAdapter', () => {
         await adapter.deploy({})
         await adapter.deploy({})
 
-        const existingViewsInPostgres = await getViewNamesFromPostgres(options.service.credentials)
+        const existingViewsInPostgres = await getViewNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
         for (const entity of tableAndViewNamesFromCds) {
@@ -203,7 +203,7 @@ describe('PostgresAdapter', () => {
 
         await adapter.deploy({ autoUndeploy: false })
 
-        const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+        const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         expect(existingTablesInPostgres.map((i) => i.table_name)).toContain('csw_beers')
         expect(existingTablesInPostgres.map((i) => i.table_name)).toContain('csw_brewery')
       })
@@ -215,7 +215,7 @@ describe('PostgresAdapter', () => {
 
         await adapter.deploy({})
 
-        const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+        const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
 
         // named in undeployFile
         expect(existingTablesInPostgres.map((i) => i.table_name)).not.toContain('csw_beers')
@@ -230,7 +230,7 @@ describe('PostgresAdapter', () => {
 
         await adapter.deploy({ autoUndeploy: true })
 
-        const existingTablesInPostgres = await getTableNamesFromPostgres(options.service.credentials)
+        const existingTablesInPostgres = await getTableNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         const tableAndViewNamesFromCds = await getEntityNamesFromCds('db', options.service.model[0])
 
         for (const entity of tableAndViewNamesFromCds) {
@@ -252,7 +252,7 @@ describe('PostgresAdapter', () => {
           const [, table, entity] = each.match(/^\s*CREATE (?:(TABLE)|VIEW)\s+"?([^\s(]+)"?/im) || []
           if (table) {
             let cdsColumns = extractTableColumnNamesFromSQL(each)
-            let tableColumns = await extractColumnNamesFromPostgres(options.service.credentials, entity)
+            let tableColumns = await extractColumnNamesFromPostgres(options.migrations.schema.default, options.service.credentials, entity)
 
             expect(cdsColumns.map((c) => c.toLowerCase()).sort).toEqual(tableColumns.map((c) => c.column_name).sort)
           }
@@ -270,7 +270,7 @@ describe('PostgresAdapter', () => {
           const [, table, entity] = each.match(/^\s*CREATE (?:(TABLE)|VIEW)\s+"?([^\s(]+)"?/im) || []
           if (table) {
             let cdsColumns = extractTableColumnNamesFromSQL(each)
-            let tableColumns = await extractColumnNamesFromPostgres(options.service.credentials, entity)
+            let tableColumns = await extractColumnNamesFromPostgres(options.migrations.schema.default, options.service.credentials, entity)
 
             expect(cdsColumns.map((c) => c.toLowerCase()).sort).toEqual(tableColumns.map((c) => c.column_name).sort)
           }
@@ -311,7 +311,7 @@ describe('PostgresAdapter', () => {
       it('should execute all plain sql scripts and create all artifacts', async () => {
         await redeploy('./test/app/db/scripts/correct/')
 
-        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         expect(existingProceduresInPostgres.length).toEqual(2)
       })
       it('should rollback all scripts if at least one failed', async (done) => {
@@ -319,14 +319,14 @@ describe('PostgresAdapter', () => {
           await redeploy('./test/app/db/scripts/incorrect/')
           fail('should fail')
         } catch (e) {
-          const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+          const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
           expect(existingProceduresInPostgres.length).toEqual(0)
         }
       })
       it('should not fail if scripts folder is empty', async () => {
         await redeploy('./test/app/db/scripts/empty/')
 
-        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.service.credentials)
+        const existingProceduresInPostgres = await getProcedureNamesFromPostgres(options.migrations.schema.default, options.service.credentials)
         expect(existingProceduresInPostgres.length).toEqual(0)
       })
 
