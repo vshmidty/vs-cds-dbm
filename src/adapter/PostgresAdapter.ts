@@ -261,23 +261,18 @@ export class PostgresAdapter extends BaseAdapter {
    * Execute all plain SQL queries defined in *.sql files
    * Using native transaction, because executeSQL is not available in liquibase. See: https://github.com/liquibase/liquibase/issues/3793
    */
-  async _executePlainSQL() {
-    const scripts = this.options.migrations.scripts
-    if (!scripts) {
-      return
-    }
-
+  async _executePlainSQL(scriptsFolder) {
     const credentials = this.options.service.credentials
     const schema = this.options.migrations.schema!.default
     const client = new Client(getCredentialsForClient(credentials))
     await client.connect()
     await client.query(`SET search_path TO ${schema};`)
 
-    const files = await readdir(scripts)
+    const files = await readdir(scriptsFolder)
 
     for (let each of files.filter(this._filterSqlFiles.bind(this))) {
       // Load the content
-      const file = path.join(scripts, each)
+      const file = path.join(scriptsFolder, each)
       const src = fs.readFileSync(file, 'utf8')
       if (!src) continue
 

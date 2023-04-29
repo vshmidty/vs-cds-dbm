@@ -15,7 +15,10 @@ interface migrationOptions {
   migrations?: {
     path: string
   },
-  scripts?: string
+  scripts?: {
+    before?: string
+    after?: string
+  }
 }
 
 interface serviceOptions {
