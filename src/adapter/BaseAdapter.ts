@@ -70,7 +70,7 @@ export abstract class BaseAdapter {
    */
   abstract _createDatabase(): Promise<void>
 
-  abstract _executePlainSQL(): Promise<void>
+  abstract _executePlainSQL(scriptsFolder: string): Promise<void>
 
   /**
    * Return the specific options for liquibase.
@@ -193,7 +193,12 @@ export abstract class BaseAdapter {
       fs.mkdirSync(dirname)
     }
 
-    // Setup the clone
+    if (!dryRun && this.options.migrations?.scripts?.before) {
+      this.logger.log(`[cds-dbm] - running sql scripts before migration`)
+      await this._executePlainSQL(this.options.migrations?.scripts?.before)
+    }
+
+      // Setup the clone
     await this._synchronizeCloneDatabase()
 
     // Drop the known views from the clone
@@ -266,12 +271,17 @@ export abstract class BaseAdapter {
         await this.load(loadMode.toLowerCase() === 'full')
       }
 
-      await this._executePlainSQL()
+      if (this.options.migrations?.scripts?.after) {
+        this.logger.log(`[cds-dbm] - running sql scripts after migration`)
+        await this._executePlainSQL(this.options.migrations?.scripts?.after)
+      }
+
     } else {
       this.logger.log(updateSQL.stdout)
     }
 
     fs.unlinkSync(temporaryChangelogFile)
+    this.logger.log(`[cds-dbm] - deployment successfully finished`)
   }
 
   /*
